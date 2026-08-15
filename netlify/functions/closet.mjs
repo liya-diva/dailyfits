@@ -45,8 +45,12 @@ export default async (req) => {
       const url = new URL(req.url);
       const offset = Math.max(0, Number(url.searchParams.get("offset") || 0));
       const limit = Math.min(24, Math.max(1, Number(url.searchParams.get("limit") || 18)));
-      const meta = (await store.get("meta", { type: "json" })) || [];
-      const outfits = offset === 0 ? (await store.get("outfits", { type: "json" })) || [] : [];
+      // These must match what the client writes. The client's keys are
+      // "closet:meta:v2" and "closet:outfits:v2", which blobKey() maps to
+      // "meta/v2" and "outfits/v2" — reading plain "meta" here silently
+      // returned an empty closet on every reload.
+      const meta = (await store.get("meta/v2", { type: "json" })) || [];
+      const outfits = offset === 0 ? (await store.get("outfits/v2", { type: "json" })) || [] : [];
       const slice = meta.slice(offset, offset + limit);
       const images = {};
       await Promise.all(
