@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>The Rail — wardrobe</title>
+<!-- build: v4 -->
+<style>
+  html, body { margin: 0; padding: 0; background: #F7F3EA; }
+  #root { min-height: 100vh; }
+  * { box-sizing: border-box; }
+  input[type=range] { accent-color: #11233F; }
+  input[type=color] { padding: 0; cursor: pointer; }
+  #boot { display: grid; place-items: center; min-height: 100vh; padding: 24px;
+    text-align: center; font-family: "Optima","Gill Sans",Avenir,sans-serif;
+    text-transform: uppercase; letter-spacing: .19em; font-size: 10px; color: #76809A; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin></script>
+</head>
+<body>
+<div id="root"><div id="boot">Opening the closet… (build v4)</div></div>
+<script>
+  window.addEventListener("error", function (e) {
+    var r = document.getElementById("boot");
+    if (r) r.textContent = "Could not start: " + (e.message || "unknown error");
+  });
+  if (!window.React || !window.ReactDOM) {
+    document.getElementById("boot").textContent =
+      "Could not load React from the network. Check the connection and reload.";
+  }
+</script>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ---------------------------------------------------------------- theme */
+const T = {
+  ink: "#F7F3EA",      // page — unbleached cream
+  panel: "#FFFDF7",    // card stock
+  panel2: "#EDE6D8",   // empty plate
+  line: "#DED5C2",
+  paper: "#11233F",    // navy, does all the reading work
+  muted: "#76809A",
+  accent: "#A8843C",   // brass, used only as a hairline or a mark
+  ok: "#3F6B54",
+};
+
+const CATEGORIES = ["Top", "Bottom", "Layer", "Shoes", "Accessory"];
+
+const CSS = `
+  .cl-root { background:${T.ink}; color:${T.paper}; min-height:100vh;
+    font-family:"Optima","Gill Sans","Gill Sans MT",Avenir,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased; }
+  .cl-display { font-family:Didot,"Bodoni MT","Playfair Display","Hoefler Text",Garamond,
+    "Times New Roman",serif; font-weight:400; letter-spacing:.2em; text-transform:uppercase; }
+  .cl-serif { font-family:Didot,"Bodoni MT","Playfair Display","Hoefler Text",Garamond,
+    "Times New Roman",serif; font-weight:400; }
+  .cl-mono { font-family:"Optima","Gill Sans","Gill Sans MT",Avenir,sans-serif;
+    text-transform:uppercase; letter-spacing:.19em; font-size:9.5px; color:${T.muted}; }
+  .cl-field { background:${T.panel}; border:1px solid ${T.line}; color:${T.paper};
+    border-radius:0; padding:12px 14px; font-size:14px; width:100%; outline:none;
+    font-family:inherit; transition:border-color .2s ease; }
+  .cl-field::placeholder { color:#A9A395; }
+  .cl-field:focus { border-color:${T.paper}; }
+  .cl-btn { background:${T.paper}; color:${T.ink}; border:1px solid ${T.paper}; border-radius:0;
+    padding:13px 24px; cursor:pointer; font-family:inherit; transition:background .2s ease,color .2s ease; }
+  .cl-btn:hover:not(:disabled) { background:transparent; color:${T.paper}; }
+  .cl-btn:disabled { opacity:.35; cursor:not-allowed; }
+  .cl-ghost { background:transparent; color:${T.paper}; border:1px solid ${T.line};
+    border-radius:0; padding:12px 20px; cursor:pointer; font-family:inherit;
+    transition:border-color .2s ease; }
+  .cl-ghost:hover { border-color:${T.paper}; }
+  .cl-chip { border:1px solid ${T.line}; background:transparent; color:${T.muted};
+    border-radius:0; padding:6px 14px; cursor:pointer; font-family:inherit;
+    transition:all .2s ease; }
+  .cl-chip[data-on="1"] { border-color:${T.paper}; color:${T.paper}; background:transparent;
+    box-shadow:inset 0 -2px 0 ${T.accent}; }
+  .cl-card { background:${T.panel}; border:1px solid ${T.line}; border-radius:0;
+    overflow:hidden; cursor:pointer; text-align:left; padding:0; width:100%;
+    transition:box-shadow .3s ease, transform .3s ease; animation:clIn .5s ease both; }
+  .cl-card:hover { transform:translateY(-4px); box-shadow:0 14px 30px rgba(17,35,63,.13); }
+  @keyframes clIn { from { opacity:0; transform:translateY(10px);} to {opacity:1;transform:none;} }
+  .cl-rail button { height:30px; border:none; cursor:pointer; flex:1 1 auto; min-width:8px;
+    transition:height .25s ease; }
+  .cl-rail button:hover, .cl-rail button[data-on="1"] { height:46px; }
+  .cl-tab { background:none; border:none; color:${T.muted}; cursor:pointer; padding:16px 2px;
+    border-bottom:1px solid transparent; font-family:inherit; transition:color .2s ease; }
+  .cl-tab:hover { color:${T.paper}; }
+  .cl-tab[data-on="1"] { color:${T.paper}; border-bottom-color:${T.accent}; }
+  .cl-grid { display:grid; gap:14px; grid-template-columns:repeat(2,1fr); }
+  @media(min-width:640px){ .cl-grid{ grid-template-columns:repeat(3,1fr); gap:18px; } }
+  @media(min-width:900px){ .cl-grid{ grid-template-columns:repeat(4,1fr); gap:22px; } }
+  @media(prefers-reduced-motion:reduce){ .cl-card{animation:none;transition:none;} }
+  input[type=file]{ display:none; }
+  select.cl-field option { color:${T.paper}; }
+`;
+
+/* ------------------------------------------------------------- helpers */
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+
+function hexToHsl(hex) {
+  let h = (hex || "").replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return { h: 0, s: 0, l: 50 };
+  const r = parseInt(h.slice(0, 2), 16) / 255,
+    g = parseInt(h.slice(2, 4), 16) / 255,
+    b = parseInt(h.slice(4, 6), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let hue = 0;
+  if (d) {
+    if (mx === r) hue = ((g - b) / d) % 6;
+    else if (mx === g) hue = (b - r) / d + 2;
+    else hue = (r - g) / d + 4;
+    hue *= 60;
+    if (hue < 0) hue += 360;
+  }
+  const l = (mx + mn) / 2;
+  const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  return { h: hue, s: s * 100, l: l * 100 };
+}
+
+function family(hex) {
+  const { h, s, l } = hexToHsl(hex);
+  if (l < 12) return "Black";
+  if (l > 88 && s < 16) return "White";
+  if (s < 12) return l < 45 ? "Charcoal" : "Grey";
+  if (s < 32 && h >= 20 && h <= 55) return "Neutral";
+  if (h < 15 || h >= 345) return "Red";
+  if (h < 42) return l < 42 ? "Brown" : "Orange";
+  if (h < 70) return "Yellow";
+  if (h < 160) return "Green";
+  if (h < 200) return "Teal";
+  if (h < 255) return "Blue";
+  if (h < 290) return "Purple";
+  return "Pink";
+}
+
+// grey/neutral tones sort to the end so the rail reads as a spectrum
+function hueRank(hex) {
+  const { h, s, l } = hexToHsl(hex);
+  if (s < 12 || l < 12 || l > 92) return 1000 + (100 - l);
+  return h;
+}
+
+const norm = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+function matches(g, query) {
+  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+  const hay = norm(
+    [g.name, g.category, g.subtype, g.color, family(g.hex), g.pattern, g.material,
+     g.formality, (g.seasons || []).join(" "), g.notes].join(" ")
+  );
+  return tokens.every((t) => hay.includes(norm(t)));
+}
+
+function fileToResized(file, max = 560) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/png"));
+      };
+      img.onerror = () => reject(new Error(
+        /heic|heif/i.test(file.type + file.name)
+          ? "This browser cannot open HEIC photos. On iPhone: Settings › Camera › Formats › Most Compatible, or export the photo as JPEG first."
+          : "That file could not be opened as an image."));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error("That file could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function shrink(dataUrl, max = 190) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/png"));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+/* --------------------------------------------- offline fallback tagging */
+// Picks the dominant garment colour from the pixels themselves. No network.
+async function sampleColor(dataUrl) {
+  try {
+    const img = await loadImg(dataUrl);
+    const s = 72;
+    const c = document.createElement("canvas");
+    c.width = s; c.height = s;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, s, s);
+    const p = ctx.getImageData(0, 0, s, s).data;
+    let br = 0, bg = 0, bb = 0, n = 0;
+    for (let x = 0; x < s; x++)
+      for (const y of [0, s - 1]) {
+        const i = (y * s + x) * 4; br += p[i]; bg += p[i + 1]; bb += p[i + 2]; n++;
+      }
+    br /= n; bg /= n; bb /= n;
+    const bucket = new Map();
+    for (let y = 6; y < s - 6; y++)
+      for (let x = 6; x < s - 6; x++) {
+        const i = (y * s + x) * 4;
+        if (p[i + 3] < 128) continue;
+        const r = p[i], g = p[i + 1], b = p[i + 2];
+        if (Math.abs(r - br) + Math.abs(g - bg) + Math.abs(b - bb) < 60) continue;
+        const k = `${r >> 4}:${g >> 4}:${b >> 4}`;
+        const e = bucket.get(k) || { r: 0, g: 0, b: 0, c: 0 };
+        e.r += r; e.g += g; e.b += b; e.c++;
+        bucket.set(k, e);
+      }
+    let best = null;
+    bucket.forEach((v) => { if (!best || v.c > best.c) best = v; });
+    if (!best) return "#8A8A8A";
+    const hx = (v) => Math.round(v / best.c).toString(16).padStart(2, "0");
+    return `#${hx(best.r)}${hx(best.g)}${hx(best.b)}`;
+  } catch (e) { return "#8A8A8A"; }
+}
+
+async function localTags(dataUrl, filename) {
+  const hex = await sampleColor(dataUrl);
+  const stem = (filename || "").replace(/\.[a-z0-9]+$/i, "").replace(/[_\-\s]+/g, " ").trim();
+  return {
+    name: stem ? stem.slice(0, 40) : `${family(hex)} piece`,
+    category: "Top", subtype: "", color: family(hex), hex,
+    pattern: "Solid", material: "", formality: "Casual", warmth: 2, seasons: [],
+    needsReview: true,
+  };
+}
+
+/* ------------------------------------------------------------ retouch */
+function loadImg(src) {
+  return new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = () => rej(new Error("That image could not be opened."));
+    i.src = src;
+  });
+}
+
+// Flood-fills inward from every edge, dropping pixels close to the border colour.
+// Built for the flat-lay shot the app already asks for: garment on a plain surface.
+function cutoutPass(d, tol) {
+  const w = d.width, h = d.height, p = d.data;
+  let sr = 0, sg = 0, sb = 0, n = 0;
+  const sample = (x, y) => { const i = (y * w + x) * 4; sr += p[i]; sg += p[i + 1]; sb += p[i + 2]; n++; };
+  for (let x = 0; x < w; x++) { sample(x, 0); sample(x, h - 1); }
+  for (let y = 0; y < h; y++) { sample(0, y); sample(w - 1, y); }
+  sr /= n; sg /= n; sb /= n;
+
+  const dist = (i, r, g, b) =>
+    Math.abs(p[i] - r) + Math.abs(p[i + 1] - g) + Math.abs(p[i + 2] - b);
+
+  const near = tol * 3;              // sum-of-channels budget
+  const drift = tol * 1.5;           // allowance for a gradient across the surface
+  const seen = new Uint8Array(w * h);
+  const stack = new Int32Array(w * h);
+  let sp = 0;
+  const push = (idx) => {
+    if (seen[idx]) return;
+    if (dist(idx * 4, sr, sg, sb) > near * 2.2) return;
+    seen[idx] = 1; stack[sp++] = idx;
+  };
+  for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
+  for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
+
+  while (sp > 0) {
+    const cur = stack[--sp];
+    const ci = cur * 4, cx = cur % w, cy = (cur / w) | 0;
+    const cr = p[ci], cg = p[ci + 1], cb = p[ci + 2];
+    const step = (nx, ny) => {
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) return;
+      const idx = ny * w + nx;
+      if (seen[idx]) return;
+      const ni = idx * 4;
+      const toSeed = dist(ni, sr, sg, sb);
+      const toHere = dist(ni, cr, cg, cb);
+      if (toSeed < near || (toHere < drift && toSeed < near * 2.2)) { seen[idx] = 1; stack[sp++] = idx; }
+    };
+    step(cx + 1, cy); step(cx - 1, cy); step(cx, cy + 1); step(cx, cy - 1);
+  }
+
+  // soften the cut edge so it doesn't read as a sticker
+  let mask = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) mask[i] = seen[i] ? 0 : 255;
+  for (let pass = 0; pass < 2; pass++) {
+    const out = new Float32Array(w * h);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        let s = 0, c = 0;
+        for (let k = -1; k <= 1; k++) {
+          const nx = x + k;
+          if (nx < 0 || nx >= w) continue;
+          s += mask[y * w + nx]; c++;
+        }
+        out[y * w + x] = s / c;
+      }
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        let s = 0, c = 0;
+        for (let k = -1; k <= 1; k++) {
+          const ny = y + k;
+          if (ny < 0 || ny >= h) continue;
+          s += out[ny * w + x]; c++;
+        }
+        mask[y * w + x] = s / c;
+      }
+  }
+  for (let i = 0; i < w * h; i++) p[i * 4 + 3] = mask[i];
+  return d;
+}
+
+async function cutout(dataUrl, tolerance = 26) {
+  const img = await loadImg(dataUrl);
+  const c = document.createElement("canvas");
+  c.width = img.width; c.height = img.height;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0);
+  const d = cutoutPass(ctx.getImageData(0, 0, c.width, c.height), tolerance);
+  ctx.putImageData(d, 0, 0);
+  return c.toDataURL("image/png");
+}
+
+/* ----------------------------------------------------------- claude api */
+async function askClaude(content) {
+  let res;
+  try {
+    res = await fetch(HOSTED ? ((API_BASE || "/api") + "/tag") : "https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-closet-key": PASS },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [{ role: "user", content }],
+      }),
+    });
+  } catch (e) {
+    const err = new Error("Could not reach the tagging service from this page.");
+    err.offline = true;
+    throw err;
+  }
+  if (res.status === 401 || res.status === 403) {
+    const err = new Error("The tagging service refused this page (no key attached).");
+    err.offline = true;
+    throw err;
+  }
+  if (res.status === 429) throw new Error("Too many photos at once — wait a minute and retry.");
+  if (!res.ok) throw new Error(`Tagging service returned ${res.status}.`);
+  const data = await res.json();
+  const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  const clean = text.replace(/```json/g, "").replace(/```/g, "").trim();
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  if (start < 0 || end < 0) throw new Error("The reply could not be read. Try again.");
+  return JSON.parse(clean.slice(start, end + 1));
+}
+
+const imgBlock = (dataUrl) => ({
+  type: "image",
+  source: {
+    type: "base64",
+    media_type: dataUrl.startsWith("data:image/png") ? "image/png" : "image/jpeg",
+    data: dataUrl.split(",")[1],
+  },
+});
+
+async function tagGarment(dataUrl) {
+  const r = await askClaude([
+    imgBlock(dataUrl),
+    {
+      type: "text",
+      text:
+        `Identify the single main garment in this photo. Reply with ONLY a JSON object, no prose:
+{"name":"short label, max 4 words","category":"Top|Bottom|Layer|Shoes|Accessory",
+"subtype":"e.g. T-shirt, straight jeans, trench coat","color":"plain colour name",
+"hex":"#rrggbb of the dominant fabric colour","pattern":"Solid|Striped|Checked|Floral|Graphic|Other",
+"material":"best guess fabric","formality":"Casual|Smart casual|Formal",
+"warmth":1,"seasons":["Spring","Summer","Fall","Winter"]}
+Category rules: Layer means anything worn over a top (jacket, cardigan, blazer, coat). warmth is 1 (lightest) to 5 (warmest). seasons lists only the ones that fit.`,
+    },
+  ]);
+  return {
+    name: r.name || "Untitled piece",
+    category: CATEGORIES.includes(r.category) ? r.category : "Top",
+    subtype: r.subtype || "",
+    color: r.color || "",
+    hex: /^#[0-9a-fA-F]{6}$/.test(r.hex || "") ? r.hex : "#888888",
+    pattern: r.pattern || "Solid",
+    material: r.material || "",
+    formality: r.formality || "Casual",
+    warmth: Number(r.warmth) || 2,
+    seasons: Array.isArray(r.seasons) ? r.seasons : [],
+  };
+}
+
+async function styleOutfit(anchor, catalog, occasion, weather) {
+  const slim = catalog.map((g) => ({
+    id: g.id, name: g.name, category: g.category, subtype: g.subtype,
+    color: g.color, hex: g.hex, family: family(g.hex), pattern: g.pattern,
+    material: g.material, formality: g.formality, warmth: g.warmth, seasons: g.seasons,
+  }));
+  const content = [];
+  if (anchor.dataUrl && !anchor.id) content.push(imgBlock(anchor.dataUrl));
+  content.push({
+    type: "text",
+    text: `You are styling one outfit from a real wardrobe.
+
+ANCHOR PIECE (must be worn): ${JSON.stringify({
+      name: anchor.name, category: anchor.category, subtype: anchor.subtype,
+      color: anchor.color, hex: anchor.hex, pattern: anchor.pattern, formality: anchor.formality,
+    })}${anchor.dataUrl && !anchor.id ? " — also shown in the image above." : ""}
+
+WARDROBE: ${JSON.stringify(slim)}
+
+Occasion: ${occasion || "everyday"}. Weather: ${weather || "mild"}.
+
+Pick pieces by id from the WARDROBE only. Do not invent ids. Do not pick a piece for the same category as the anchor. Leave a slot as null if nothing in the wardrobe works — never force a bad match. Consider colour harmony, pattern clash, formality consistency and warmth.
+
+Reply with ONLY this JSON:
+{"top":"id or null","bottom":"id or null","layer":"id or null","shoes":"id or null",
+"accessories":["id"],"title":"short outfit name, max 4 words",
+"why":"2 sentences on why these work together","tip":"one styling tip","gap":"one missing piece that would improve this, or empty string"}`,
+  });
+  return askClaude(content);
+}
+
+/* ------------------------------------------------------------- storage */
+const META = "closet:meta:v2";
+const OUTF = "closet:outfits:v2";
+const IMG = (id) => `closet:img:${id}`;
+const HOSTED = /^https?:$/.test(window.location.protocol);
+
+let PASS = "";
+try { PASS = window.localStorage.getItem("closet:pass") || ""; } catch (e) { PASS = ""; }
+function setPass(v) {
+  PASS = v || "";
+  try { window.localStorage.setItem("closet:pass", PASS); } catch (e) {}
+}
+
+// Netlify serves functions at /.netlify/functions/<name>; /api/* is a nicety that
+// depends on redirects being picked up. Try the pretty path, fall back to the real one.
+let API_BASE = null;
+const BASES = ["/api", "/.netlify/functions"];
+
+async function callBase(base, path, init) {
+  return fetch(base + path, {
+    ...init,
+    headers: { "content-type": "application/json", "x-closet-key": PASS, ...(init && init.headers) },
+  });
+}
+
+async function api(path, init) {
+  let res;
+  const tried = [];
+  if (API_BASE) {
+    res = await callBase(API_BASE, path, init);
+    tried.push(`${API_BASE}${path} -> ${res.status}`);
+  } else {
+    for (const base of BASES) {
+      res = await callBase(base, path, init);
+      tried.push(`${base}${path} -> ${res.status}`);
+      if (res.status !== 404) { API_BASE = base; break; }
+    }
+  }
+  if (res.status === 401) { const e = new Error("Wrong passphrase."); e.auth = true; throw e; }
+  if (res.status === 404) {
+    // Report exactly what was attempted so the cause is visible rather than guessed at.
+    throw new Error("No endpoint answered. Tried: " + tried.join("  |  "));
+  }
+  if (!res.ok) {
+    let msg = `Server returned ${res.status}.`;
+    try { const j = await res.json(); if (j.error) msg = j.error; } catch (e) {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+const remoteStore = {
+  async get(k) {
+    const r = await api("/closet", { method: "POST", body: JSON.stringify({ op: "get", key: k }) });
+    if (r.value == null) throw new Error("no key");
+    return { key: k, value: r.value };
+  },
+  async set(k, v) {
+    await api("/closet", { method: "POST", body: JSON.stringify({ op: "set", key: k, value: v }) });
+    return { key: k, value: v };
+  },
+  async delete(k) {
+    await api("/closet", { method: "POST", body: JSON.stringify({ op: "del", key: k }) });
+    return { key: k, deleted: true };
+  },
+  async bulk(onProgress) {
+    const garments = [];
+    let outfits = [], meta = [], total = 0, offset = 0;
+    for (let page = 0; page < 40; page++) {
+      const r = await api(`/closet?offset=${offset}&limit=18`, { method: "GET" });
+      if (offset === 0) { meta = r.meta || []; outfits = r.outfits || []; total = r.total || 0; }
+      const byId = Object.fromEntries(meta.map((g) => [g.id, g]));
+      (r.slice || []).forEach((id) => {
+        if (byId[id]) garments.push({ ...byId[id], dataUrl: r.images[id] || null });
+      });
+      offset += 18;
+      onProgress && onProgress(Math.min(total, garments.length), total);
+      if (offset >= total) break;
+    }
+    return { garments, outfits };
+  },
+};
+
+let localOk = false;
+try { window.localStorage.setItem("closet:probe", "1"); window.localStorage.removeItem("closet:probe"); localOk = true; } catch (e) { localOk = false; }
+const localStore = {
+  get: async (k) => { const v = window.localStorage.getItem(k); if (v === null) throw new Error("no key"); return { key: k, value: v }; },
+  set: async (k, v) => { window.localStorage.setItem(k, v); return { key: k, value: v }; },
+  delete: async (k) => { window.localStorage.removeItem(k); return { key: k, deleted: true }; },
+  list: async () => ({ keys: [] }),
+};
+
+// Set to true once the server proves unreachable, so the app keeps working
+// against this browser's own storage instead of showing a dead screen.
+let FELL_BACK = false;
+
+const store = () => (typeof window !== "undefined" && window.storage) ? window.storage
+  : (HOSTED && !FELL_BACK) ? remoteStore : (localOk ? localStore : null);
+
+async function loadAll(setProgress) {
+  const s = store();
+  if (!s) return { garments: [], outfits: [] };
+  if (s.bulk) return s.bulk(setProgress);
+  let meta = [], outfits = [];
+  try { const r = await s.get(META); meta = r ? JSON.parse(r.value) : []; } catch { meta = []; }
+  try { const r = await s.get(OUTF); outfits = r ? JSON.parse(r.value) : []; } catch { outfits = []; }
+  const out = [];
+  for (let i = 0; i < meta.length; i += 6) {
+    const batch = meta.slice(i, i + 6);
+    const imgs = await Promise.all(
+      batch.map((g) => s.get(IMG(g.id)).then((r) => (r ? r.value : null)).catch(() => null))
+    );
+    batch.forEach((g, k) => out.push({ ...g, dataUrl: imgs[k] }));
+    setProgress && setProgress(Math.min(meta.length, i + 6), meta.length);
+  }
+  return { garments: out, outfits };
+}
+
+async function saveMeta(garments) {
+  const s = store();
+  if (!s) return;
+  const meta = garments.map(({ dataUrl, ...rest }) => rest);
+  try { await s.set(META, JSON.stringify(meta)); return true; }
+  catch (e) { console.error(e); return false; }
+}
+
+/* ------------------------------------------------------------ subviews */
+function Swatch({ hex, size = 14 }) {
+  return (
+    <span style={{ width: size, height: size, background: hex, display: "inline-block",
+      borderRadius: 2, border: "1px solid rgba(17,35,63,.22)", flex: "none" }} />
+  );
+}
+
+function Card({ g, onClick }) {
+  return (
+    <button className="cl-card" onClick={onClick}>
+      <div style={{ aspectRatio: "3/4", background: T.panel, position: "relative" }}>
+        {g.dataUrl ? (
+          <img src={g.dataUrl} alt={g.name}
+            style={{ width: "100%", height: "100%", objectFit: "contain", padding: 10 }} />
+        ) : (
+          <div className="cl-mono" style={{ display: "grid", placeItems: "center", height: "100%" }}>
+            no photo
+          </div>
+        )}
+        <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(17,35,63,.86)",
+          padding: "3px 7px", borderRadius: 2, color: T.ink }} className="cl-mono">{g.category}</span>
+        {g.needsReview && (
+          <span title="Needs details" style={{ position: "absolute", top: 10, right: 10, width: 7,
+            height: 7, borderRadius: 99, background: T.accent }} />
+        )}
+      </div>
+      <div style={{ padding: "13px 13px 15px" }}>
+        <div className="cl-serif" style={{ fontSize: 15, marginBottom: 8, lineHeight: 1.3 }}>{g.name}</div>
+        <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+          <Swatch hex={g.hex} size={10} />
+          <span className="cl-mono">{g.color || family(g.hex)}</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function Detail({ g, onSave, onDelete, onClose }) {
+  const [d, setD] = useState(g);
+  const set = (k, v) => setD({ ...d, [k]: v });
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(17,35,63,.55)",
+      zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: 12 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: T.panel, border: `1px solid ${T.line}`,
+        borderRadius: 3, width: "100%", maxWidth: 520, maxHeight: "88vh", overflowY: "auto" }}>
+        {d.dataUrl && (
+          <img src={d.dataUrl} alt={d.name}
+            style={{ width: "100%", maxHeight: 300, objectFit: "contain", background: T.panel }} />
+        )}
+        <div style={{ padding: 16, display: "grid", gap: 12 }}>
+          <div>
+            <div className="cl-mono" style={{ marginBottom: 5 }}>Name</div>
+            <input className="cl-field" value={d.name} onChange={(e) => set("name", e.target.value)} />
+          </div>
+          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
+            <div>
+              <div className="cl-mono" style={{ marginBottom: 5 }}>Category</div>
+              <select className="cl-field" value={d.category} onChange={(e) => set("category", e.target.value)}>
+                {CATEGORIES.map((c) => <option key={c} value={c} >{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <div className="cl-mono" style={{ marginBottom: 5 }}>Type</div>
+              <input className="cl-field" value={d.subtype} onChange={(e) => set("subtype", e.target.value)} />
+            </div>
+          </div>
+          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
+            <div>
+              <div className="cl-mono" style={{ marginBottom: 5 }}>Colour</div>
+              <input className="cl-field" value={d.color} onChange={(e) => set("color", e.target.value)} />
+            </div>
+            <div>
+              <div className="cl-mono" style={{ marginBottom: 5 }}>Swatch</div>
+              <input type="color" value={d.hex} onChange={(e) => set("hex", e.target.value)}
+                style={{ width: "100%", height: 40, background: T.panel, border: `1px solid ${T.line}` }} />
+            </div>
+          </div>
+          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
+            <div>
+              <div className="cl-mono" style={{ marginBottom: 5 }}>Material</div>
+              <input className="cl-field" value={d.material} onChange={(e) => set("material", e.target.value)} />
+            </div>
+            <div>
+              <div className="cl-mono" style={{ marginBottom: 5 }}>Formality</div>
+              <select className="cl-field" value={d.formality} onChange={(e) => set("formality", e.target.value)}>
+                {["Casual", "Smart casual", "Formal"].map((c) =>
+                  <option key={c} value={c} >{c}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <div className="cl-mono" style={{ marginBottom: 5 }}>Notes</div>
+            <input className="cl-field" value={d.notes || ""} placeholder="Fits big, gift from Mum…"
+              onChange={(e) => set("notes", e.target.value)} />
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button className="cl-btn cl-display" style={{ fontSize: 12, flex: 1 }}
+              onClick={() => onSave({ ...d, needsReview: false })}>Save changes</button>
+            <button className="cl-ghost cl-display" style={{ fontSize: 12 }} onClick={onClose}>Close</button>
+            <button className="cl-ghost cl-display" style={{ fontSize: 12, color: T.accent, borderColor: T.accent }}
+              onClick={() => onDelete(d.id)}>Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- app */
+function Closet() {
+  const [tab, setTab] = useState("closet");
+  const [garments, setGarments] = useState([]);
+  const [outfits, setOutfits] = useState([]);
+  const [booting, setBooting] = useState(true);
+  const [bootMsg, setBootMsg] = useState("Opening the closet");
+  const [query, setQuery] = useState("");
+  const [catFilter, setCatFilter] = useState("All");
+  const [colFilter, setColFilter] = useState(null);
+  const [sortBy, setSortBy] = useState("color");
+  const [detail, setDetail] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const [err, setErr] = useState("");
+
+  const [locked, setLocked] = useState(false);
+  const [passInput, setPassInput] = useState("");
+
+  async function boot() {
+    setBooting(true); setErr("");
+    try {
+      const { garments: g, outfits: o } = await loadAll((a, b) =>
+        setBootMsg(`Loading pieces ${a} of ${b}`));
+      setGarments(g); setOutfits(o); setLocked(false);
+    } catch (e) {
+      if (e.auth) { setLocked(true); setBooting(false); return; }
+      // The server is unreachable. Rather than stopping, switch to this
+      // browser's storage so the closet stays usable.
+      FELL_BACK = true;
+      try {
+        const { garments: g, outfits: o } = await loadAll(() => {});
+        setGarments(g); setOutfits(o);
+      } catch (e2) { setGarments([]); setOutfits([]); }
+      setErr("The server could not be reached, so this closet is saved in this browser only — "
+        + "it will not appear on your other devices. Details: " + e.message);
+    }
+    setBooting(false);
+  }
+
+  useEffect(() => { boot(); }, []);
+
+  const persist = async (next) => {
+    setGarments(next);
+    const ok = await saveMeta(next);
+    if (ok === false) setErr("The closet could not be saved. Check the connection and try again.");
+  };
+
+  /* ------- add pieces */
+  async function handleFiles(files, opts) {
+    setErr("");
+    const list = Array.from(files).slice(0, 12);
+    setQueue(list.map((f) => ({ name: f.name, state: "waiting" })));
+    let working = garments;
+    for (let i = 0; i < list.length; i++) {
+      setQueue((q) => q.map((x, k) => (k === i ? { ...x, state: "reading" } : x)));
+      try {
+        let dataUrl = await fileToResized(list[i]);
+        setQueue((q) => q.map((x, k) => (k === i ? { ...x, state: "cutting" } : x)));
+        await new Promise((r) => setTimeout(r, 20)); // let the status paint
+        dataUrl = await cutout(dataUrl, (opts && opts.tolerance) || 26);
+        setQueue((q) => q.map((x, k) => (k === i ? { ...x, state: "tagging" } : x)));
+        let tags, review = false;
+        try {
+          tags = await tagGarment(dataUrl);
+        } catch (e) {
+          // The photo is good — only the tagging failed. File it with a locally
+          // sampled colour and let the fields be filled in by hand.
+          tags = await localTags(dataUrl, list[i].name);
+          review = true;
+          setErr(e.offline
+            ? "Automatic tagging is unavailable on this page, so pieces are being filed with the colour read from the photo. Tap any card to name it and set its type."
+            : e.message);
+        }
+        const g = { id: uid(), ...tags, notes: "", addedAt: Date.now(), dataUrl };
+        const s = store();
+        if (s) {
+          try { await s.set(IMG(g.id), dataUrl); }
+          catch (e) { setErr("This photo could not be saved to the server: " + e.message); }
+        }
+        working = [g, ...working];
+        await persist(working);
+        setQueue((q) => q.map((x, k) => (k === i
+          ? { ...x, state: review ? "manual" : "done", label: g.name } : x)));
+      } catch (e) {
+        setQueue((q) => q.map((x, k) => (k === i
+          ? { ...x, state: "failed", reason: e.message } : x)));
+        setErr(e.message);
+      }
+    }
+    setTimeout(() => setQueue([]), 2600);
+  }
+
+  async function removeGarment(id) {
+    const next = garments.filter((g) => g.id !== id);
+    setDetail(null);
+    await persist(next);
+    const s = store();
+    if (s) { try { await s.delete(IMG(id)); } catch {} }
+  }
+
+  /* ------- derived */
+  const rail = useMemo(() => {
+    const map = new Map();
+    garments.forEach((g) => {
+      const f = family(g.hex);
+      if (!map.has(f)) map.set(f, { name: f, hex: g.hex, count: 0, rank: hueRank(g.hex) });
+      map.get(f).count++;
+    });
+    return [...map.values()].sort((a, b) => a.rank - b.rank);
+  }, [garments]);
+
+  const shown = useMemo(() => {
+    let list = garments.filter((g) => matches(g, query));
+    if (catFilter !== "All") list = list.filter((g) => g.category === catFilter);
+    if (colFilter) list = list.filter((g) => family(g.hex) === colFilter);
+    if (sortBy === "color") list = [...list].sort((a, b) => hueRank(a.hex) - hueRank(b.hex));
+    if (sortBy === "recent") list = [...list].sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+    if (sortBy === "category")
+      list = [...list].sort((a, b) =>
+        CATEGORIES.indexOf(a.category) - CATEGORIES.indexOf(b.category) || hueRank(a.hex) - hueRank(b.hex));
+    return list;
+  }, [garments, query, catFilter, colFilter, sortBy]);
+
+  /* ------------------------------------------------------------ render */
+  if (locked)
+    return (
+      <div className="cl-root" style={{ display: "grid", placeItems: "center", padding: 32 }}>
+        <style>{CSS}</style>
+        <div style={{ width: "100%", maxWidth: 320, textAlign: "center" }}>
+          <div className="cl-display" style={{ fontSize: 22, marginBottom: 10 }}>The Rail</div>
+          <div className="cl-mono" style={{ marginBottom: 18 }}>Passphrase</div>
+          <input className="cl-field" type="password" value={passInput} autoFocus
+            onChange={(e) => setPassInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setPass(passInput); boot(); } }} />
+          <button className="cl-btn cl-display" style={{ fontSize: 11, marginTop: 14, width: "100%" }}
+            onClick={() => { setPass(passInput); boot(); }}>Open the closet</button>
+          {err && <div className="cl-mono" style={{ color: T.accent, marginTop: 14 }}>{err}</div>}
+        </div>
+      </div>
+    );
+
+  if (booting)
+    return (
+      <div className="cl-root" style={{ display: "grid", placeItems: "center", padding: 40 }}>
+        <style>{CSS}</style>
+        <div className="cl-mono">{bootMsg}…</div>
+      </div>
+    );
+
+  return (
+    <div className="cl-root">
+      <style>{CSS}</style>
+
+      {/* masthead */}
+      <div style={{ borderBottom: `1px solid ${T.line}`, padding: "26px 16px 0", position: "sticky",
+        top: 0, background: T.ink, zIndex: 20 }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
+            <div className="cl-display" style={{ fontSize: 25, lineHeight: 1 }}>The Rail</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 12, marginTop: 12 }}>
+              <span style={{ height: 1, width: 34, background: T.accent }} />
+              <span className="cl-mono">{garments.length} pieces · {outfits.length} outfits</span>
+              <span style={{ height: 1, width: 34, background: T.accent }} />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 28, justifyContent: "center", flexWrap: "wrap" }}>
+            {[["closet", "Closet"], ["add", "Add pieces"], ["style", "Style me"], ["outfits", "Outfits"]]
+              .map(([k, label]) => (
+                <button key={k} className="cl-tab cl-display" data-on={tab === k ? "1" : "0"}
+                  style={{ fontSize: 11 }} onClick={() => setTab(k)}>{label}</button>
+              ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: "16px 16px 60px", maxWidth: 1100, margin: "0 auto" }}>
+        {err && (
+          <div style={{ border: `1px solid ${T.accent}`, borderLeftWidth: 3, padding: "12px 14px",
+            marginBottom: 18, display: "flex", gap: 14, alignItems: "flex-start" }}>
+            <span className="cl-serif" style={{ fontSize: 14, lineHeight: 1.6, flex: 1 }}>{err}</span>
+            <button className="cl-mono" onClick={() => setErr("")}
+              style={{ background: "none", border: "none", cursor: "pointer", color: T.accent }}>
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------ CLOSET */}
+        {tab === "closet" && (
+          <>
+            <input className="cl-field" value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder='Search — try "black t-shirt" or "wool layer"' style={{ marginBottom: 12 }} />
+
+            {rail.length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                <div className="cl-mono" style={{ marginBottom: 6 }}>
+                  {colFilter ? `Colour · ${colFilter}` : "Your closet by colour — tap to filter"}
+                </div>
+                <div className="cl-rail" style={{ display: "flex", alignItems: "flex-end", gap: 2 }}>
+                  {rail.map((c) => (
+                    <button key={c.name} title={`${c.name} · ${c.count}`} data-on={colFilter === c.name ? "1" : "0"}
+                      onClick={() => setColFilter(colFilter === c.name ? null : c.name)}
+                      style={{ background: c.hex, flexGrow: c.count,
+                        outline: colFilter === c.name ? `2px solid ${T.paper}` : "none" }} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              {["All", ...CATEGORIES].map((c) => (
+                <button key={c} className="cl-chip cl-mono" data-on={catFilter === c ? "1" : "0"}
+                  onClick={() => setCatFilter(c)}>{c}</button>
+              ))}
+              <span style={{ flex: 1 }} />
+              {[["color", "By colour"], ["category", "By type"], ["recent", "Newest"]].map(([k, l]) => (
+                <button key={k} className="cl-chip cl-mono" data-on={sortBy === k ? "1" : "0"}
+                  onClick={() => setSortBy(k)}>{l}</button>
+              ))}
+            </div>
+
+            {shown.length === 0 ? (
+              <div style={{ border: `1px dashed ${T.line}`, padding: 32, textAlign: "center", borderRadius: 3 }}>
+                <div className="cl-serif" style={{ fontSize: 19, marginBottom: 10 }}>
+                  {garments.length ? "Nothing matches that" : "The closet is empty"}
+                </div>
+                <div style={{ color: T.muted, fontSize: 13, marginBottom: 14 }}>
+                  {garments.length
+                    ? "Clear the search or pick a different colour."
+                    : "Photograph a few garments and they get tagged, coloured and filed automatically."}
+                </div>
+                <button className="cl-btn cl-display" style={{ fontSize: 12 }}
+                  onClick={() => (garments.length ? (setQuery(""), setColFilter(null), setCatFilter("All")) : setTab("add"))}>
+                  {garments.length ? "Clear filters" : "Add pieces"}
+                </button>
+              </div>
+            ) : (
+              <div className="cl-grid">
+                {shown.map((g) => <Card key={g.id} g={g} onClick={() => setDetail(g)} />)}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* --------------------------------------------------------- ADD */}
+        {tab === "add" && (
+          <AddPieces queue={queue} onRun={handleFiles} />
+        )}
+
+        {/* ------------------------------------------------------- STYLE */}
+        {tab === "style" && (
+          <StyleMe garments={garments} onSave={async (o) => {
+            const next = [o, ...outfits].slice(0, 20);
+            setOutfits(next);
+            const s = store();
+            if (s) { try { await s.set(OUTF, JSON.stringify(next)); } catch {} }
+            setTab("outfits");
+          }} />
+        )}
+
+        {/* ----------------------------------------------------- OUTFITS */}
+        {tab === "outfits" && (
+          outfits.length === 0 ? (
+            <div style={{ border: `1px dashed ${T.line}`, padding: 32, textAlign: "center", borderRadius: 3 }}>
+              <div className="cl-serif" style={{ fontSize: 19, marginBottom: 10 }}>No outfits saved</div>
+              <div style={{ color: T.muted, fontSize: 13, marginBottom: 14 }}>
+                Start from one piece and the rest of the look gets built around it.
+              </div>
+              <button className="cl-btn cl-display" style={{ fontSize: 12 }}
+                onClick={() => setTab("style")}>Style an outfit</button>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 16 }}>
+              {outfits.map((o) => (
+                <div key={o.id} style={{ border: `1px solid ${T.line}`, borderRadius: 3, padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                    <div className="cl-serif" style={{ fontSize: 17 }}>{o.title}</div>
+                    <button className="cl-mono" style={{ background: "none", border: "none",
+                      color: T.accent, cursor: "pointer" }}
+                      onClick={async () => {
+                        const next = outfits.filter((x) => x.id !== o.id);
+                        setOutfits(next);
+                        const s = store();
+                        if (s) { try { await s.set(OUTF, JSON.stringify(next)); } catch {} }
+                      }}>Remove</button>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+                    {o.pieces.map((p, i) => (
+                      <img key={i} src={p.dataUrl} alt={p.name}
+                        style={{ width: 92, height: 122, objectFit: "contain", background: T.panel, flex: "none" }} />
+                    ))}
+                  </div>
+                  <div className="cl-serif" style={{ fontSize: 14, color: T.muted, marginTop: 12, lineHeight: 1.6 }}>{o.why}</div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+
+      {detail && (
+        <Detail g={detail}
+          onSave={async (d) => { await persist(garments.map((g) => (g.id === d.id ? d : g))); setDetail(null); }}
+          onDelete={removeGarment} onClose={() => setDetail(null)} />
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------- add pieces */
+function AddPieces({ queue, onRun }) {
+  const [files, setFiles] = useState([]);
+  const [original, setOriginal] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [tolerance, setTolerance] = useState(26);
+  const [working, setWorking] = useState(false);
+  const [note, setNote] = useState("");
+  const ref = useRef(null);
+  const job = useRef(0);
+
+  async function pick(fileList) {
+    const list = Array.from(fileList).slice(0, 12);
+    setFiles(list); setNote("");
+    try { setOriginal(await fileToResized(list[0])); } catch (e) { setNote(e.message); }
+  }
+
+  useEffect(() => {
+    if (!original) return;
+    const id = ++job.current;
+    setWorking(true);
+    const t = setTimeout(async () => {
+      try {
+        const out = await cutout(original, tolerance);
+        if (job.current === id) setPreview(out);
+      } catch (e) { if (job.current === id) setNote(e.message); }
+      if (job.current === id) setWorking(false);
+    }, 140);
+    return () => clearTimeout(t);
+  }, [original, tolerance]);
+
+  const running = queue.length > 0 && queue.some((q) => q.state !== "done" && q.state !== "failed");
+  const checker = "repeating-conic-gradient(#EDE6D8 0 25%, #FFFDF7 0 50%) 0 0/16px 16px";
+
+  return (
+    <div style={{ maxWidth: 720 }}>
+      <p className="cl-serif" style={{ color: T.muted, fontSize: 15, lineHeight: 1.65, marginTop: 0,
+        maxWidth: 540 }}>
+        Shoot each garment flat on a plain surface. The background is cut away
+        automatically — up to twelve pieces at a time.
+      </p>
+
+      <input ref={ref} type="file" accept="image/*" multiple
+        onChange={(e) => { pick(e.target.files); e.target.value = ""; }} />
+      <button className="cl-btn cl-display" style={{ fontSize: 11 }}
+        onClick={() => ref.current && ref.current.click()}>
+        {files.length ? "Choose different photos" : "Choose photos"}
+      </button>
+
+      {original && (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, margin: "22px 0 18px" }}>
+            {[["As shot", original, T.panel2], ["Cut out", preview, checker]].map(([label, src, bg]) => (
+              <div key={label}>
+                <div className="cl-mono" style={{ marginBottom: 7 }}>{label}</div>
+                <div style={{ border: `1px solid ${T.line}`, background: bg, aspectRatio: "3/4",
+                  display: "grid", placeItems: "center", overflow: "hidden" }}>
+                  {src ? (
+                    <img src={src} alt={label}
+                      style={{ width: "100%", height: "100%", objectFit: "contain",
+                        opacity: label === "Cut out" && working ? 0.45 : 1,
+                        transition: "opacity .2s ease" }} />
+                  ) : <span className="cl-mono">working</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ borderTop: `1px solid ${T.line}`, paddingTop: 18, display: "grid", gap: 18 }}>
+            <div style={{ maxWidth: 340 }}>
+              <div className="cl-mono" style={{ marginBottom: 7 }}>Edge sensitivity · {tolerance}</div>
+              <input type="range" min="8" max="60" value={tolerance} style={{ width: "100%" }}
+                onChange={(e) => setTolerance(Number(e.target.value))} />
+              <div style={{ color: T.muted, fontSize: 12.5, lineHeight: 1.55, marginTop: 6 }}>
+                Raise it if background survives around the edges. Lower it if the garment itself is
+                being eaten away — that happens when a piece is close in colour to whatever it is
+                lying on.
+              </div>
+            </div>
+
+            <button className="cl-btn cl-display" style={{ fontSize: 11, justifySelf: "start" }}
+              disabled={running || working}
+              onClick={() => onRun(files, { tolerance })}>
+              {running ? "Filing…" : `Add ${files.length} ${files.length === 1 ? "piece" : "pieces"}`}
+            </button>
+          </div>
+        </>
+      )}
+
+      {note && <div className="cl-mono" style={{ color: T.accent, marginTop: 12 }}>{note}</div>}
+
+      {queue.length > 0 && (
+        <div style={{ marginTop: 24, display: "grid", gap: 9 }}>
+          {queue.map((q, i) => (
+            <div key={i} style={{ borderBottom: `1px solid ${T.line}`, paddingBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                <span className="cl-serif" style={{ fontSize: 14, color: T.muted, overflow: "hidden",
+                  textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.label || q.name}</span>
+                <span className="cl-mono" style={{ flex: "none",
+                  color: q.state === "done" ? T.ok : q.state === "failed" ? T.accent : T.muted }}>
+                  {{ waiting: "queued", reading: "resizing", cutting: "cutting out",
+                     tagging: "tagging", done: "filed", manual: "filed · needs details",
+                     failed: "failed" }[q.state]}
+                </span>
+              </div>
+              {q.reason && (
+                <div style={{ color: T.accent, fontSize: 12.5, lineHeight: 1.5, marginTop: 5 }}>
+                  {q.reason}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ style me */
+function StyleMe({ garments, onSave }) {
+  const [anchor, setAnchor] = useState(null);
+  const [occasion, setOccasion] = useState("");
+  const [weather, setWeather] = useState("Mild");
+  const [busy, setBusy] = useState("");
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+  const fileRef = useRef(null);
+
+  async function onUpload(file) {
+    setError(""); setResult(null); setBusy("Reading the photo");
+    try {
+      const dataUrl = await fileToResized(file);
+      setBusy("Identifying the piece");
+      const tags = await tagGarment(dataUrl);
+      setAnchor({ ...tags, dataUrl });
+    } catch (e) { setError(e.message); }
+    setBusy("");
+  }
+
+  async function build() {
+    setError(""); setBusy("Pulling the look together");
+    try {
+      const r = await styleOutfit(anchor, garments.filter((g) => g.id !== anchor.id),
+        occasion, weather);
+      const byId = Object.fromEntries(garments.map((g) => [g.id, g]));
+      const picked = ["top", "bottom", "layer", "shoes"]
+        .map((k) => byId[r[k]])
+        .concat((r.accessories || []).map((id) => byId[id]))
+        .filter(Boolean)
+        .filter((g) => g.id !== anchor.id);
+      setResult({ ...r, pieces: [anchor, ...picked] });
+    } catch (e) { setError(e.message); }
+    setBusy("");
+  }
+
+  if (garments.length < 3)
+    return (
+      <div style={{ border: `1px dashed ${T.line}`, padding: 32, textAlign: "center", borderRadius: 3 }}>
+        <div className="cl-serif" style={{ fontSize: 19, marginBottom: 10 }}>Not enough to work with</div>
+        <div style={{ color: T.muted, fontSize: 13 }}>
+          Add at least three pieces — a top, a bottom and a layer — and outfits can be built from them.
+        </div>
+      </div>
+    );
+
+  return (
+    <div style={{ display: "grid", gap: 18, maxWidth: 720 }}>
+      <div>
+        <div className="cl-mono" style={{ marginBottom: 8 }}>1 · Start from one piece</div>
+        <input ref={fileRef} type="file" accept="image/*"
+          onChange={(e) => { if (e.target.files[0]) onUpload(e.target.files[0]); e.target.value = ""; }} />
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button className="cl-ghost cl-display" style={{ fontSize: 12 }}
+            onClick={() => fileRef.current && fileRef.current.click()}>Upload a photo</button>
+          <span className="cl-mono">or tap one below</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 0 4px" }}>
+          {garments.map((g) => (
+            <button key={g.id} onClick={() => { setAnchor(g); setResult(null); }}
+              style={{ padding: 0, border: anchor && anchor.id === g.id ? `2px solid ${T.accent}` : `1px solid ${T.line}`,
+                background: "none", borderRadius: 2, cursor: "pointer", flex: "none" }}>
+              <img src={g.dataUrl} alt={g.name}
+                style={{ width: 68, height: 90, objectFit: "contain", background: T.panel, display: "block" }} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {anchor && (
+        <div style={{ display: "flex", gap: 12, alignItems: "center", border: `1px solid ${T.line}`,
+          borderRadius: 3, padding: 10 }}>
+          <img src={anchor.dataUrl} alt={anchor.name}
+            style={{ width: 56, height: 74, objectFit: "contain", background: T.panel }} />
+          <div>
+            <div className="cl-serif" style={{ fontSize: 16 }}>{anchor.name}</div>
+            <div className="cl-mono" style={{ marginTop: 4 }}>
+              {anchor.category} · {anchor.color} · {anchor.formality}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div className="cl-mono" style={{ marginBottom: 8 }}>2 · Where are you going</div>
+        <input className="cl-field" value={occasion} onChange={(e) => setOccasion(e.target.value)}
+          placeholder="Dinner, office, long flight…" />
+        <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+          {["Hot", "Mild", "Cool", "Cold", "Rain"].map((w) => (
+            <button key={w} className="cl-chip cl-mono" data-on={weather === w ? "1" : "0"}
+              onClick={() => setWeather(w)}>{w}</button>
+          ))}
+        </div>
+      </div>
+
+      <button className="cl-btn cl-display" style={{ fontSize: 12, justifySelf: "start" }}
+        disabled={!anchor || !!busy} onClick={build}>
+        {busy || "Build the outfit"}
+      </button>
+
+      {error && <div className="cl-mono" style={{ color: T.accent }}>{error}</div>}
+
+      {result && (
+        <div style={{ borderTop: `1px solid ${T.line}`, paddingTop: 16 }}>
+          <div className="cl-serif" style={{ fontSize: 24, marginBottom: 16 }}>{result.title}</div>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 6 }}>
+            {result.pieces.map((p, i) => (
+              <div key={i} style={{ flex: "none", width: 110 }}>
+                <img src={p.dataUrl} alt={p.name}
+                  style={{ width: 110, height: 146, objectFit: "contain", background: T.panel }} />
+                <div className="cl-mono" style={{ marginTop: 6 }}>{p.category}</div>
+                <div className="cl-serif" style={{ fontSize: 13, marginTop: 3 }}>{p.name}</div>
+              </div>
+            ))}
+          </div>
+          <p className="cl-serif" style={{ fontSize: 16, lineHeight: 1.65, color: T.paper, maxWidth: 560 }}>{result.why}</p>
+          {result.tip && (
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: T.muted, borderLeft: `2px solid ${T.accent}`,
+              paddingLeft: 10 }}>{result.tip}</p>
+          )}
+          {result.gap && (
+            <p className="cl-mono" style={{ lineHeight: 1.8 }}>Missing from your closet · {result.gap}</p>
+          )}
+          <button className="cl-btn cl-display" style={{ fontSize: 12, marginTop: 8 }}
+            onClick={async () => {
+              const thumbs = await Promise.all(result.pieces.map(async (p) => ({
+                name: p.name, dataUrl: await shrink(p.dataUrl),
+              })));
+              onSave({ id: uid(), title: result.title, why: result.why,
+                pieces: thumbs, savedAt: Date.now() });
+            }}>
+            Save this outfit
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Closet />);
+
+</script>
+</body>
+</html>
